@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scooter Dash 🛴 - لعبة التروتينيت</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & FontAwesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      font-family: 'Tajawal', 'Outfit', sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-gradient {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+      box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.5);
+      transition: all 0.2s ease;
+    }
+    .btn-gradient:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 15px 30px -5px rgba(139, 92, 246, 0.7);
+    }
+    .btn-gradient:active {
+      transform: translateY(1px) scale(0.98);
+    }
+    .pulse-glow {
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+      50% { box-shadow: 0 0 35px rgba(236, 72, 153, 0.8); }
+    }
+  </style>
+</head>
+<body class="h-screen w-screen relative bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
+
+  <!-- Container اللعبة -->
+  <div id="game-container" class="relative w-full h-full max-w-6xl max-h-[850px] sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900">
+
+    <!-- Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- واجهة HUD أثناء اللعب -->
+    <div id="hud" class="hidden absolute top-0 left-0 w-full p-4 sm:p-6 flex justify-between items-center pointer-events-none z-10">
+      <!-- النتيجة -->
+      <div class="glass-panel rounded-2xl px-5 py-2.5 flex items-center gap-4 text-white shadow-lg">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-trophy text-amber-400 text-xl"></i>
+          <div>
+            <div class="text-[10px] uppercase text-slate-400 font-bold leading-none">النتيجة</div>
+            <div id="scoreDisplay" class="text-2xl font-extrabold tracking-wider text-amber-300">0</div>
+          </div>
+        </div>
+        <div class="h-8 w-[1px] bg-slate-700"></div>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-gem text-cyan-400 text-xl"></i>
+          <div>
+            <div class="text-[10px] uppercase text-slate-400 font-bold leading-none">الجواهر</div>
+            <div id="coinsDisplay" class="text-xl font-bold text-cyan-300">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- زر الصوت والتعليق -->
+      <div class="flex items-center gap-3 pointer-events-auto">
+        <button id="soundToggleBtn" class="glass-panel w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-slate-800/80 transition">
+          <i id="soundIcon" class="fa-solid fa-volume-high text-lg"></i>
+        </button>
+        <button id="pauseBtn" class="glass-panel w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-slate-800/80 transition">
+          <i class="fa-solid fa-pause text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- شاشة البداية (Start Menu) -->
+    <div id="startMenu" class="absolute inset-0 flex flex-col items-center justify-center glass-panel z-20 p-6 text-center">
+      <!-- شعار اللعبة -->
+      <div class="relative mb-6">
+        <div class="text-6xl sm:text-7xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 drop-shadow-lg">
+          SCOOTER DASH
+        </div>
+        <div class="text-lg sm:text-xl font-bold text-slate-300 mt-2 tracking-widest uppercase">
+          🛴 مغامرة التروتينيت السريعة ⚡
+        </div>
+      </div>
+
+      <!-- اختيار التروتينيت -->
+      <div class="mb-8 w-full max-w-sm">
+        <div class="text-slate-400 text-sm mb-3 font-semibold">اختر لون التروتينيت:</div>
+        <div class="flex justify-center gap-4" id="colorSelector">
+          <button data-color="#06b6d4" class="scooter-color-btn w-12 h-12 rounded-2xl bg-cyan-500 border-4 border-white shadow-lg transform hover:scale-110 transition"></button>
+          <button data-color="#ec4899" class="scooter-color-btn w-12 h-12 rounded-2xl bg-pink-500 border-2 border-transparent shadow-lg transform hover:scale-110 transition opacity-80"></button>
+          <button data-color="#eab308" class="scooter-color-btn w-12 h-12 rounded-2xl bg-amber-500 border-2 border-transparent shadow-lg transform hover:scale-110 transition opacity-80"></button>
+          <button data-color="#10b981" class="scooter-color-btn w-12 h-12 rounded-2xl bg-emerald-500 border-2 border-transparent shadow-lg transform hover:scale-110 transition opacity-80"></button>
+        </div>
+      </div>
+
+      <!-- زر البدء -->
+      <button id="startBtn" class="btn-gradient pulse-glow px-12 py-4 rounded-full text-2xl font-black text-white tracking-widest flex items-center gap-3">
+        <i class="fa-solid fa-play"></i> ابدأ اللعب
+      </button>
+
+      <!-- أفضل نتيجة والإرشادات -->
+      <div class="mt-8 flex flex-col items-center gap-3">
+        <div class="flex items-center gap-2 text-amber-400 font-bold text-lg bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/30">
+          <i class="fa-solid fa-crown"></i>
+          <span>أعلى نتيجة: <span id="highScoreStart">0</span></span>
+        </div>
+
+        <div class="text-xs text-slate-400 mt-2 max-w-md bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+          💡 <span class="text-slate-200 font-bold">طريقة التحكم:</span> اضغط على الشاشة، أو على زر <code class="bg-slate-800 px-1.5 py-0.5 rounded text-cyan-400">Space</code> / <code class="bg-slate-800 px-1.5 py-0.5 rounded text-cyan-400">↑</code> للقفز وتفادي الحواجز. يمكنك القفز مرتين (Double Jump)!
+        </div>
+      </div>
+    </div>
+
+    <!-- شاشة الخسارة (Game Over Screen) -->
+    <div id="gameOverMenu" class="hidden absolute inset-0 flex flex-col items-center justify-center glass-panel z-20 p-6 text-center animate-fade-in">
+      <div class="w-20 h-20 rounded-full bg-red-500/20 border-2 border-red-500/50 flex items-center justify-center mb-4 text-amber-300 text-4xl animate-bounce">
+        <!-- أيقونة الوجه الباكي -->
+        <i class="fa-solid fa-face-sad-cry text-5xl text-amber-400"></i>
+      </div>
+      
+      <h2 class="text-4xl font-extrabold text-white mb-1">وااااع! خسرتي 😭</h2>
+      <p class="text-slate-300 text-sm mb-6">اصطدمتي بالحاجز في الشارع، حاول مرة أخرى!</p>
+
+      <div class="glass-panel p-6 rounded-2xl w-full max-w-xs mb-6 border border-slate-700/50 flex flex-col gap-3">
+        <div class="flex justify-between items-center text-slate-300">
+          <span>النتيجة النهائية:</span>
+          <span id="finalScore" class="text-2xl font-black text-amber-400">0</span>
+        </div>
+        <div class="flex justify-between items-center text-slate-300">
+          <span>الجواهر المجمعة:</span>
+          <span id="finalCoins" class="text-xl font-bold text-cyan-400">0</span>
+        </div>
+        <div class="h-[1px] bg-slate-700/50 my-1"></div>
+        <div class="flex justify-between items-center text-slate-300">
+          <span>أفضل رقم قياسي:</span>
+          <span id="highScoreGameOver" class="text-xl font-bold text-emerald-400">0</span>
+        </div>
+      </div>
+
+      <button id="restartBtn" class="btn-gradient px-10 py-3.5 rounded-full text-xl font-bold text-white flex items-center gap-3">
+        <i class="fa-solid fa-rotate-right"></i> إعادة اللعب
+      </button>
+    </div>
+
+    <!-- شاشة الإيقاف المؤقت (Pause Screen) -->
+    <div id="pauseMenu" class="hidden absolute inset-0 flex flex-col items-center justify-center glass-panel z-20 p-6 text-center">
+      <h2 class="text-4xl font-extrabold text-white mb-6">اللعبة متوقفة</h2>
+      <button id="resumeBtn" class="btn-gradient px-10 py-3.5 rounded-full text-xl font-bold text-white flex items-center gap-3">
+        <i class="fa-solid fa-play"></i> استئناف
+      </button>
+    </div>
+
+  </div>
+
+  <!-- كود اللعبة بالكامل -->
+  <script>
+    // --- إعدادات Web Audio API للمؤثرات الصوتية ---
+    class SoundController {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playJump() {
+        if (this.muted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      playCoin() {
+        if (this.muted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(1200, this.ctx.currentTime + 0.08);
+
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+      }
+
+      // صوت البكاء والخسارة (Sad Crying Pitch Slide)
+      playCrying() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        
+        // نغمة البكاء والحزن المرتدة
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+
+        // انخفاض التردد لمحاكاة صوت البكاء "واااع"
+        osc.frequency.setValueAtTime(450, now);
+        osc.frequency.linearRampToValueAtTime(320, now + 0.25);
+        osc.frequency.linearRampToValueAtTime(380, now + 0.4);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 1.1);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 1.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.1);
+      }
+    }
+
+    const soundCtrl = new SoundController();
+
+    // --- المحرك الرئيسي للعبة ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gameContainer = document.getElementById('game-container');
+
+    // الشاشات والأزرار
+    const startMenu = document.getElementById('startMenu');
+    const gameOverMenu = document.getElementById('gameOverMenu');
+    const pauseMenu = document.getElementById('pauseMenu');
+    const hud = document.getElementById('hud');
+
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resumeBtn = document.getElementById('resumeBtn');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundIcon = document.getElementById('soundIcon');
+
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const coinsDisplay = document.getElementById('coinsDisplay');
+    const finalScore = document.getElementById('finalScore');
+    const finalCoins = document.getElementById('finalCoins');
+    const highScoreStart = document.getElementById('highScoreStart');
+    const highScoreGameOver = document.getElementById('highScoreGameOver');
+
+    // إعداد حجم Canvas وتجاوبه
+    let width = 0;
+    let height = 0;
+    let groundY = 0;
+
+    function resizeCanvas() {
+      width = gameContainer.clientWidth;
+      height = gameContainer.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+      groundY = height - 100;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // حالة اللعبة
+    let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER
+    let score = 0;
+    let coinsCollected = 0;
+    let highScore = localStorage.getItem('scooter_high_score') || 0;
+    highScoreStart.textContent = Math.floor(highScore);
+
+    let speed = 7;
+    let gameTime = 0;
+    let scooterColor = '#06b6d4';
+
+    // اختيار لون التروتينيت
+    document.querySelectorAll('.scooter-color-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.scooter-color-btn').forEach(b => {
+          b.classList.remove('border-4', 'border-white');
+          b.classList.add('border-2', 'border-transparent', 'opacity-80');
+        });
+        e.currentTarget.classList.remove('border-2', 'border-transparent', 'opacity-80');
+        e.currentTarget.classList.add('border-4', 'border-white');
+        scooterColor = e.currentTarget.getAttribute('data-color');
+      });
+    });
+
+    // --- اللاعب (التروتينيت) ---
+    const player = {
+      x: 80,
+      y: 0,
+      width: 60,
+      height: 75,
+      vy: 0,
+      gravity: 0.75,
+      jumpForce: -15,
+      isGrounded: false,
+      jumpsLeft: 2,
+      wheelAngle: 0,
+
+      reset() {
+        this.x = Math.min(100, width * 0.15);
+        this.y = groundY - this.height;
+        this.vy = 0;
+        this.isGrounded = true;
+        this.jumpsLeft = 2;
+        this.wheelAngle = 0;
+      },
+
+      jump() {
+        if (this.jumpsLeft > 0) {
+          this.vy = this.jumpForce;
+          this.jumpsLeft--;
+          this.isGrounded = false;
+          soundCtrl.playJump();
+
+          // إنشاء غبار/شرارة عند القفز
+          createParticles(this.x + 20, this.y + this.height, 8, '#94a3b8');
+        }
+      },
+
+      update() {
+        this.vy += this.gravity;
+        this.y += this.vy;
+
+        // الاصطدام بالأرض
+        if (this.y + this.height >= groundY) {
+          this.y = groundY - this.height;
+          this.vy = 0;
+          if (!this.isGrounded) {
+            // غبار الهبوط
+            createParticles(this.x + 20, groundY, 5, '#cbd5e1');
+          }
+          this.isGrounded = true;
+          this.jumpsLeft = 2;
+        }
+
+        // دوران العجلات
+        if (this.isGrounded) {
+          this.wheelAngle += speed * 0.08;
+        }
+      },
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // ميلان الجسم حسب القفز
+        let tilt = this.vy * 0.02;
+        ctx.rotate(tilt);
+
+        // ظلال الأرضية
+        if (this.isGrounded) {
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.beginPath();
+          ctx.ellipse(30, this.height + 5, 30, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 1. هيكل التروتينيت (Scooter Body)
+        // العجلات
+        const drawWheel = (wx, wy) => {
+          ctx.save();
+          ctx.translate(wx, wy);
+          ctx.rotate(this.wheelAngle);
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.arc(0, 0, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.arc(0, 0, 6, 0, Math.PI * 2);
+          ctx.fill();
+          // أسلاك العجلة
+          ctx.strokeStyle = '#64748b';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-10, 0); ctx.lineTo(10, 0);
+          ctx.moveTo(0, -10); ctx.lineTo(0, 10);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawWheel(8, this.height - 12);
+        drawWheel(52, this.height - 12);
+
+        // القاعدة الأفقيّة
+        ctx.fillStyle = scooterColor;
+        ctx.beginPath();
+        ctx.roundRect(5, this.height - 16, 50, 8, 4);
+        ctx.fill();
+
+        // عمود المقود
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(48, this.height - 14);
+        ctx.lineTo(40, 20);
+        ctx.stroke();
+
+        // المقود (Handlebar)
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.roundRect(34, 16, 16, 6, 3);
+        ctx.fill();
+
+        // 2. السائق (Rider Stick Figure/Stylized Character)
+        // الأرجل
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(25, this.height - 14); // رجل على البورد
+        ctx.lineTo(30, this.height - 35);
+        ctx.lineTo(38, 35); // الأوراك
+        ctx.stroke();
+
+        // الجذع
+        ctx.strokeStyle = scooterColor;
+        ctx.lineWidth = 14;
+        ctx.beginPath();
+        ctx.moveTo(38, 35);
+        ctx.lineTo(32, 12);
+        ctx.stroke();
+
+        // الذراع
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(34, 16);
+        ctx.lineTo(42, 20);
+        ctx.stroke();
+
+        // الخوذة والرأس
+        ctx.fillStyle = '#f8fafc'; // وجه
+        ctx.beginPath();
+        ctx.arc(32, 2, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // خوذة ملونة
+        ctx.fillStyle = scooterColor;
+        ctx.beginPath();
+        ctx.arc(32, 0, 12, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(20, -2, 22, 5);
+
+        // نظارة / عيون
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(32, 0, 10, 5, 2);
+        ctx.fill();
+
+        // رسم الدموع والوجه الباكي في حال الخسارة
+        if (gameState === 'GAMEOVER') {
+          // دموع أزرق فاتح تسقط من العين
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(36, 6, 3, 0, Math.PI * 2);
+          ctx.arc(32, 10, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    };
+
+    // --- الحواجز والجواهر والجسيمات والنخيل ---
+    let obstacles = [];
+    let coins = [];
+    let particles = [];
+    let bgBuildings = [];
+    let palmTrees = [];
+    let tearParticles = [];
+
+    // إنشاء الأبنية والنخيل المستوحاة من المعمار المغربي
+    function initBuildings() {
+      bgBuildings = [];
+      palmTrees = [];
+      
+      const moroccanColors = ['#c2410c', '#b45309', '#d97706', '#9a3412', '#7c2d12', '#ea580c'];
+      let x = 0;
+      
+      while (x < width + 400) {
+        let bWidth = 80 + Math.random() * 90;
+        let bHeight = 140 + Math.random() * 180;
+        let color = moroccanColors[Math.floor(Math.random() * moroccanColors.length)];
+        
+        bgBuildings.push({
+          x: x,
+          width: bWidth,
+          height: bHeight,
+          color: color,
+          hasArchDoor: Math.random() > 0.3,
+          hasBattlements: Math.random() > 0.4
+        });
+
+        // إضافة نخيل بين المباني
+        if (Math.random() > 0.5) {
+          palmTrees.push({
+            x: x + bWidth + 15,
+            height: 90 + Math.random() * 50
+          });
+        }
+
+        x += bWidth + 25;
+      }
+    }
+
+    function createTears(x, y) {
+      for (let i = 0; i < 15; i++) {
+        tearParticles.push({
+          x: x + (Math.random() - 0.5) * 20,
+          y: y + (Math.random() - 0.5) * 10,
+          vx: (Math.random() - 0.5) * 5,
+          vy: -2 - Math.random() * 4,
+          size: 3 + Math.random() * 4,
+          alpha: 1
+        });
+      }
+    }
+
+    function createParticles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 1) * 4,
+          size: 3 + Math.random() * 4,
+          color: color,
+          alpha: 1,
+          life: 0.04
+        });
+      }
+    }
+
+    function spawnObstacle() {
+      const types = ['cone', 'barrier', 'trash'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      let obs = {
+        x: width + 50,
+        type: type,
+        passed: false
+      };
+
+      if (type === 'cone') {
+        obs.width = 30;
+        obs.height = 40;
+      } else if (type === 'barrier') {
+        obs.width = 50;
+        obs.height = 55;
+      } else if (type === 'trash') {
+        obs.width = 40;
+        obs.height = 45;
+      }
+
+      obs.y = groundY - obs.height;
+      obstacles.push(obs);
+
+      // إنشاء جواهر فوق الحواجز أحياناً
+      if (Math.random() > 0.4) {
+        coins.push({
+          x: obs.x + obs.width / 2,
+          y: obs.y - 50 - Math.random() * 40,
+          size: 14,
+          collected: false,
+          pulse: 0
+        });
+      }
+    }
+
+    let obstacleTimer = 0;
+    let obstacleInterval = 100;
+
+    // --- تحديث عناصر اللعبة ---
+    function updateGame() {
+      if (gameState !== 'PLAYING') return;
+
+      gameTime++;
+      score += 0.15;
+      speed = 7 + Math.floor(score / 150) * 0.8; // زيادة السرعة تدريجياً
+
+      scoreDisplay.textContent = Math.floor(score);
+
+      // تحديث اللاعب
+      player.update();
+
+      // تحديث خلفية الشارع المغربي (Parallax Moroccan Street)
+      bgBuildings.forEach(b => {
+        b.x -= speed * 0.3;
+      });
+      palmTrees.forEach(p => {
+        p.x -= speed * 0.3;
+      });
+
+      if (bgBuildings.length > 0 && bgBuildings[0].x + bgBuildings[0].width < -50) {
+        let first = bgBuildings.shift();
+        let lastX = bgBuildings[bgBuildings.length - 1].x + bgBuildings[bgBuildings.length - 1].width + 25;
+        first.x = lastX;
+        bgBuildings.push(first);
+      }
+
+      if (palmTrees.length > 0 && palmTrees[0].x < -50) {
+        let firstP = palmTrees.shift();
+        firstP.x = width + 100 + Math.random() * 100;
+        palmTrees.push(firstP);
+      }
+
+      // إطلاق الحواجز
+      obstacleTimer++;
+      if (obstacleTimer > obstacleInterval) {
+        spawnObstacle();
+        obstacleTimer = 0;
+        obstacleInterval = Math.max(50, 90 - Math.floor(score / 100) * 5 + Math.random() * 30);
+      }
+
+      // تحديث الحواجز واكتشاف الاصطدام
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.x -= speed;
+
+        // فحص الاصطدام (AABB Bounding Box)
+        const padding = 8;
+        if (
+          player.x + padding < obs.x + obs.width &&
+          player.x + player.width - padding > obs.x &&
+          player.y + padding < obs.y + obs.height &&
+          player.y + player.height > obs.y
+        ) {
+          triggerGameOver();
+        }
+
+        // إزالة الحواجز الخارجة
+        if (obs.x + obs.width < -50) {
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // تحديث الجواهر
+      for (let i = coins.length - 1; i >= 0; i--) {
+        let coin = coins[i];
+        coin.x -= speed;
+        coin.pulse += 0.1;
+
+        // التقاط الجوهرة
+        let dist = Math.hypot((player.x + player.width / 2) - coin.x, (player.y + player.height / 2) - coin.y);
+        if (dist < player.width / 2 + coin.size) {
+          coinsCollected++;
+          score += 25;
+          coinsDisplay.textContent = coinsCollected;
+          soundCtrl.playCoin();
+          coins.splice(i, 1);
+        } else if (coin.x + coin.size < -50) {
+          coins.splice(i, 1);
+        }
+      }
+
+      // تحديث دموع البكاء
+      for (let i = tearParticles.length - 1; i >= 0; i--) {
+        let t = tearParticles[i];
+        t.x += t.vx;
+        t.y += t.vy;
+        t.vy += 0.3; // الجاذبية للدموع
+        t.alpha -= 0.02;
+        if (t.alpha <= 0) {
+          tearParticles.splice(i, 1);
+        }
+      }
+    }
+
+    // --- رسم الشارع المغربي والديكور (Moroccan Visuals) ---
+    function drawGame() {
+      // 1. سماء الغروب المغربي الدافئ (Sunset Gradient)
+      let grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, '#4c1d95');   // بنفسجي داكن في الأعلى
+      grad.addColorStop(0.4, '#c2410c'); // أورانج آجوري
+      grad.addColorStop(0.8, '#f59e0b'); // ذهبي الغروب
+      grad.addColorStop(1, '#fed7aa');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      // الشمس عند الغروب
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.85)';
+      ctx.beginPath();
+      ctx.arc(width * 0.75, groundY - 110, 55, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. النخيل في الخلفية
+      palmTrees.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, groundY);
+        
+        // جذع النخلة
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-10, -p.height / 2, 0, -p.height);
+        ctx.stroke();
+
+        // أوراق النخيل (Fronds)
+        ctx.fillStyle = '#15803d';
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+          ctx.save();
+          ctx.translate(0, -p.height);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.ellipse(20, 0, 25, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      });
+
+      // 3. المباني المغربية بالأقواس والشرفات (Moroccan Buildings & Horseshoe Arches)
+      bgBuildings.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x, groundY - b.height, b.width, b.height);
+
+        // شرفات وأسوار تقليدية فوق المبنى (Crenellations)
+        if (b.hasBattlements) {
+          ctx.fillStyle = b.color;
+          let step = 15;
+          for (let bx = b.x; bx < b.x + b.width - step; bx += step * 2) {
+            ctx.fillRect(bx, groundY - b.height - 10, step, 10);
+          }
+        }
+
+        // الأقواس والنوافذ المغربية (Horseshoe Arches)
+        ctx.fillStyle = '#451a03'; // ظل النافذة الداخلي
+        ctx.strokeStyle = '#fef08a'; // إطار زليج مذهب
+        ctx.lineWidth = 2;
+
+        for (let wy = groundY - b.height + 30; wy < groundY - 40; wy += 45) {
+          for (let wx = b.x + 15; wx < b.x + b.width - 20; wx += 28) {
+            // رسم قوس مغربي تقليدي
+            ctx.beginPath();
+            ctx.arc(wx + 8, wy, 8, Math.PI, 0); // القوس العلوي
+            ctx.lineTo(wx + 16, wy + 16);
+            ctx.lineTo(wx, wy + 16);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          }
+        }
+
+        // باب مغربي كبير في الأسفل (Moroccan Wooden Door)
+        if (b.hasArchDoor && b.width > 70) {
+          let doorX = b.x + b.width / 2 - 12;
+          let doorY = groundY - 35;
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.arc(doorX + 12, doorY, 12, Math.PI, 0);
+          ctx.fillRect(doorX, doorY, 24, 35);
+          ctx.fill();
+          // حاشية الباب
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+
+      // 4. الطريق والشارع التقليدي (Moroccan Red-Tile Sidewalk & Street)
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(0, groundY, width, height - groundY);
+
+      // رصيف الشارع بلون زليج/آجور مغربي
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(0, groundY, width, 12);
+      ctx.fillStyle = '#d97706';
+      for (let rx = 0; rx < width; rx += 30) {
+        ctx.fillRect(rx, groundY, 15, 12);
+      }
+
+      // خطوط الطريق المتحركة
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([30, 25]);
+      ctx.lineDashOffset = -gameTime * speed * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY + 45);
+      ctx.lineTo(width, groundY + 45);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 5. رسم الحواجز والجواهر واللاعب
+      obstacles.forEach(obs => {
+        ctx.save();
+        ctx.translate(obs.x, obs.y);
+
+        if (obs.type === 'cone') {
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(obs.width / 2, 0);
+          ctx.lineTo(obs.width, obs.height);
+          ctx.lineTo(0, obs.height);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(obs.width * 0.25, obs.height * 0.4, obs.width * 0.5, 8);
+        } else if (obs.type === 'barrier') {
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(0, 5, obs.width, 18);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(10, 5, 12, 18);
+          ctx.fillRect(30, 5, 12, 18);
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(6, 23, 6, obs.height - 23);
+          ctx.fillRect(obs.width - 12, 23, 6, obs.height - 23);
+        } else if (obs.type === 'trash') {
+          ctx.fillStyle = '#10b981';
+          ctx.beginPath();
+          ctx.roundRect(0, 0, obs.width, obs.height, 4);
+          ctx.fill();
+          ctx.fillStyle = '#047857';
+          ctx.fillRect(0, 0, obs.width, 8);
+        }
+
+        ctx.restore();
+      });
+
+      coins.forEach(coin => {
+        ctx.save();
+        ctx.translate(coin.x, coin.y + Math.sin(coin.pulse) * 4);
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(0, 0, coin.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-3, -3, coin.size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      player.draw();
+
+      // رسم الجسيمات والدموع عند الخسارة
+      particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      tearParticles.forEach(t => {
+        ctx.save();
+        ctx.globalAlpha = t.alpha;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // --- انتهاء اللعبة والخسارة مع صوت البكاء ---
+    function triggerGameOver() {
+      gameState = 'GAMEOVER';
+      
+      // تشغيل صوت البكاء وإنشاء دموع متطايرة
+      soundCtrl.playCrying();
+      createTears(player.x + 30, player.y + 10);
+
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('scooter_high_score', highScore);
+      }
+
+      finalScore.textContent = Math.floor(score);
+      finalCoins.textContent = coinsCollected;
+      highScoreGameOver.textContent = Math.floor(highScore);
+      highScoreStart.textContent = Math.floor(highScore);
+
+      hud.classList.add('hidden');
+      gameOverMenu.classList.remove('hidden');
+    }
+
+    // --- دوال التحكم وبدء اللعبة ---
+    function startGame() {
+      soundCtrl.init();
+      gameState = 'PLAYING';
+      score = 0;
+      coinsCollected = 0;
+      gameTime = 0;
+      speed = 7;
+      obstacles = [];
+      coins = [];
+      particles = [];
+      tearParticles = [];
+      
+      scoreDisplay.textContent = '0';
+      coinsDisplay.textContent = '0';
+      
+      player.reset();
+      initBuildings();
+
+      startMenu.classList.add('hidden');
+      gameOverMenu.classList.add('hidden');
+      hud.classList.remove('hidden');
+    }
+
+    function loop() {
+      if (gameState === 'PLAYING') {
+        updateGame();
+      }
+      // مسح الشاشة قبل الرسم
+      ctx.clearRect(0, 0, width, height);
+      drawGame();
+      requestAnimationFrame(loop);
+    }
+
+    // أحداث القفز (اللمس، النقر، ولوحة المفاتيح)
+    function handleJump(e) {
+      if (gameState === 'PLAYING') {
+        if (e.target.closest('button')) return; // تجاهل النقر على الأزرار
+        if (e.type === 'touchstart') e.preventDefault(); // منع تمرير الشاشة
+        player.jump();
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        handleJump(e);
+      }
+    });
+    gameContainer.addEventListener('mousedown', handleJump);
+    gameContainer.addEventListener('touchstart', handleJump, {passive: false});
+
+    // الأزرار والتفاعل
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+
+    pauseBtn.addEventListener('click', () => {
+      if (gameState === 'PLAYING') {
+        gameState = 'PAUSED';
+        pauseMenu.classList.remove('hidden');
+      }
+    });
+
+    resumeBtn.addEventListener('click', () => {
+      if (gameState === 'PAUSED') {
+        gameState = 'PLAYING';
+        pauseMenu.classList.add('hidden');
+      }
+    });
+
+    soundToggleBtn.addEventListener('click', () => {
+      soundCtrl.muted = !soundCtrl.muted;
+      if (soundCtrl.muted) {
+        soundIcon.className = 'fa-solid fa-volume-xmark text-lg text-red-400';
+      } else {
+        soundIcon.className = 'fa-solid fa-volume-high text-lg';
+      }
+    });
+
+    // تهيئة البداية
+    initBuildings();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
